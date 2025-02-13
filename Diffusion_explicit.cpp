@@ -14,14 +14,14 @@ using namespace std;
 #define pi 3.141592
 #define L 1
 #define H 1
-#define DELT 0.001
+#define DELT 0.00001
 
 //DEFINING FUNCTION
 void grid_generation();
 void initial_condition();
 void boundary_condition();
 void coefficients_calc();
-void solve_implicit();
+void solve_explicit();
 void WRITE_FILE();
 void update();
 
@@ -33,14 +33,14 @@ double X0[NJ][NI], X1[NJ][NI], X2[NJ][NI], X3[NJ][NI], Y0[NJ][NI], Y1[NJ][NI], Y
 double s0[NJ][NI], s1[NJ][NI], s2[NJ][NI], s3[NJ][NI], DXF0[NJ][NI], DXF1[NJ][NI], DXF2[NJ][NI], DXF3[NJ][NI], VOL[NJ][NI]; // Surface Area and Nodal Distance
 double DELX = L / (NI-2.0),DELY = H / (NJ-2.0);
 int NCELLI = NI-1, NCELLJ = NJ-1,NSTEP=0;
-double PHI[NJ][NI], PHI_OLD[NJ][NI], PHI_INT[NJ][NI]; // Temperature Array
+double PHI[NJ][NI], PHI_OLD[NJ][NI]; // Temperature Array
 double ae[NJ][NI], as[NJ][NI], aw[NJ][NI], an[NJ][NI], ap[NJ][NI]; // Coefficients
 
 int main()
 {
-	mkdir("SMIT");
+	mkdir("RUN1");
 	double TMAX=5.01;
-	int WRITE_INT_CONTOUR=10;
+	int WRITE_INT_CONTOUR=1000;
 	grid_generation();
 	initial_condition();
 	boundary_condition();
@@ -50,7 +50,7 @@ int main()
 	for(NSTEP=1; NSTEP<=(TMAX/DELT); NSTEP++)
 	{
 		boundary_condition();
-		solve_implicit();
+		solve_explicit();
 		if( NSTEP % WRITE_INT_CONTOUR == 0)
 		{
 			WRITE_FILE();
@@ -131,15 +131,15 @@ int main()
 	void initial_condition()
 	{
 	
-		for (j = 0;j <= NCELLJ;j++)
+	for (j = 0;j <= NCELLJ;j++)
+	{
+		for (i = 0;i <= NCELLI;i++)
 		{
-			for (i = 0;i <= NCELLI;i++)
-			{
-				PHI_OLD[j][i] = 100;
-				PHI[j][i] = 100;
-			}
+			PHI_OLD[j][i] = 100;
+			PHI[j][i] = 100;
 		}
 	}
+}
 	
 	void boundary_condition() //Considering Dirichlet Boundary Condition on every wall
 	{
@@ -183,43 +183,19 @@ int main()
 	}
 }
 
-		void solve_implicit ()
-		{  
-           
-
-                    for (j = 0;j <= NCELLJ;j++)
+		void solve_explicit ()
+		{
+			for (j = 1;j < NCELLJ;j++)
+			{
+                for(i=1;i < NCELLI;i++)
                 {
-                    for (i = 0;i <= NCELLI;i++)
-                    {
-                        PHI_INT[j][i]=PHI[j][i];
+                    PHI[j][i] = ((q_gen*DELT)/(rho*cp)) + PHI_OLD[j][i] + (DELT/VOL[j][i])*(aw[j][i]*PHI_OLD[j][i-1] + ae[j][i]*PHI_OLD[j][i+1] + as[j][i]*PHI_OLD[j-1][i] + an[j][i]*PHI_OLD[j+1][i] - ap[j][i]*PHI_OLD[j][i]);
 
-                    }
                 }
-                  
-					float l=1;
-					float error=0;
-                   while (l>0.01)
-                   {		l=0;
-                            for (j = 1;j < NCELLJ;j++)
-                        {
-                            for(i=1;i < NCELLI;i++)
-                            {
-                                PHI[j][i] = ((q_gen*DELT)/(rho*cp)) + PHI_OLD[j][i] + (DELT/VOL[j][i])*(aw[j][i]*PHI_INT[j][i-1] + ae[j][i]*PHI_INT[j][i+1] + as[j][i]*PHI_INT[j-1][i] + an[j][i]*PHI_INT[j+1][i] - ap[j][i]*PHI_INT[j][i]);
-                                l=error+(pow((PHI[j][i]-PHI_INT[j][i]),2));
-                                l=sqrt(error/10000);
-								PHI_INT[j][i]=PHI[j][i];
-                            }
-                        }
-                   }
-                   
-
-                   update();
-               
-            
-            }
+			}
 			
 			
-		
+		}
 		
 		void update()
 		{
@@ -237,7 +213,7 @@ int main()
 			int i,j;
 			ofstream file;
 			stringstream ss;
-			ss << "SMIT/TEMP_PROFILE_TIME_" << NSTEP*DELT << ".dat";
+			ss << "RUN1/TEMP_PROFILE_TIME_" << NSTEP*DELT << ".dat";
 			file.open(ss.str().c_str());
 			file<<"VARIABLES = "<<'"'<<"X"<<'"'<<", "<<'"'<<"Y"<<'"'<<", "<<'"'<<"TEMPERATURE"<<'"'<<endl;
 			file<<"ZONE I="<<NI<<", J="<<NJ<<", F=POINT"<< endl;
@@ -254,5 +230,8 @@ int main()
     
 	
  
+
+
+
 
 
